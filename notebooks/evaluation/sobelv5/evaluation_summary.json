@@ -1,0 +1,90 @@
+{
+  "model": "sobelv5",
+  "checkpoint": "D:\\Images by GAN\\dog-gan-project\\models\\sobelv5\\stage3\\best\\generator_best.weights.h5",
+  "image_size": 128,
+  "noise_dim": 100,
+  "embedding_dim": 50,
+  "species_to_label": {
+    "dog": 0,
+    "cat": 1
+  },
+  "generated_metrics": [
+    {
+      "species": "dog",
+      "struct": 0.9314104318618774,
+      "color": 0.21408598124980927,
+      "sharp": 0.3060183823108673
+    },
+    {
+      "species": "cat",
+      "struct": 0.9447009563446045,
+      "color": 0.21822303533554077,
+      "sharp": 0.32443657517433167
+    }
+  ],
+  "real_data_available": true,
+  "best_checkpoints": [
+    {
+      "stage": "stage1",
+      "epoch": 60,
+      "score": 1.0,
+      "health": 0.8589,
+      "struct_dog": 0.9127,
+      "color_dog": 0.1978,
+      "sharp_dog": 0.3324,
+      "struct_cat": 0.8426,
+      "color_cat": 0.1856,
+      "sharp_cat": 0.3534
+    },
+    {
+      "stage": "stage2",
+      "epoch": 200,
+      "score": 0.9931,
+      "health": 0.9373,
+      "struct_dog": 0.9467,
+      "color_dog": 0.2057,
+      "sharp_dog": 0.3198,
+      "struct_cat": 0.9196,
+      "color_cat": 0.2206,
+      "sharp_cat": 0.3326
+    },
+    {
+      "stage": "stage3",
+      "epoch": 5,
+      "score": 1.0,
+      "health": 0.936,
+      "struct_dog": 0.9486,
+      "color_dog": 0.2052,
+      "sharp_dog": 0.3216,
+      "struct_cat": 0.9183,
+      "color_cat": 0.2198,
+      "sharp_cat": 0.3365
+    }
+  ],
+  "real_vs_generated": [
+    {
+      "species": "dog",
+      "real_struct": 0.9526801705360413,
+      "fake_struct": 0.9314104318618774,
+      "struct_ratio": 0.9776737785578827,
+      "real_color": 0.2352994680404663,
+      "fake_color": 0.21408598124980927,
+      "color_ratio": 0.9098446925283499,
+      "real_sharp": 0.30989429354667664,
+      "fake_sharp": 0.3060183823108673,
+      "sharp_ratio": 0.987492763850609
+    },
+    {
+      "species": "cat",
+      "real_struct": 0.9807629585266113,
+      "fake_struct": 0.9447009563446045,
+      "struct_ratio": 0.96323065476648,
+      "real_color": 0.2032681703567505,
+      "fake_color": 0.21822303533554077,
+      "color_ratio": 1.0735720413915422,
+      "real_sharp": 0.34295764565467834,
+      "fake_sharp": 0.32443657517433167,
+      "sharp_ratio": 0.9459960138665182
+    }
+  ]
+}

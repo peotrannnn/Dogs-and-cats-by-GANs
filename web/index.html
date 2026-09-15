@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>sobelv5 Evolution</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body>
+  <main class="app">
+    <h1>sobelv5</h1>
+
+    <div class="image-frame" id="imageFrame">
+      <div id="placeholder">Generated image</div>
+
+      <img
+        id="imageA"
+        class="result-image active"
+        alt="Generated result"
+        hidden
+      />
+
+      <img
+        id="imageB"
+        class="result-image"
+        alt="Generated result"
+        hidden
+      />
+    </div>
+
+    <div class="species-row">
+      <label>
+        <input type="radio" name="species" value="dog" checked />
+        Dog
+      </label>
+
+      <label>
+        <input type="radio" name="species" value="cat" />
+        Cat
+      </label>
+    </div>
+
+    <div class="progress-track">
+      <div id="progressBar" class="progress-bar"></div>
+    </div>
+
+    <div id="status" class="status">Ready</div>
+
+    <button id="generateButton" type="button">
+      Generate
+    </button>
+
+    <div id="seedText" class="seed"></div>
+  </main>
+
+  <script src="/script.js"></script>
+</body>
+</html>

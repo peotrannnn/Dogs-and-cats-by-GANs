@@ -1,0 +1,16 @@
+# Dependencies for the LOCAL notebooks (01_download_data, 02_eda, 03_preprocessing).
+# 04_model_training onward runs on Google Colab — TensorFlow is already available there,
+# so it is not listed here; that notebook installs anything extra it needs inline.
+
+kagglehub>=0.3       # used to download the AFHQ mirror from Kaggle (andrewmvd/animal-faces)
+ipywidgets>=8.0      # renders the inline token-entry widget for kagglehub.login() in Jupyter
+pandas>=2.0
+numpy>=1.24
+matplotlib>=3.7
+seaborn>=0.13
+pillow>=10.0
+opencv-python>=4.9
+scikit-learn>=1.3
+imagehash>=4.3
+tqdm>=4.66
+jupyter>=1.0

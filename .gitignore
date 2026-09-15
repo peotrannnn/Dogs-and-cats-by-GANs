@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Dataset
+data/raw/
+data/processed/images_64/
+data/processed/images_128/
+
+# Temporary / local
+*.zip
+.DS_Store
+Thumbs.db
+
+# Training checkpoints
+models/**/snapshots/
+models/**/generator.weights.h5
+models/**/generator_ema.weights.h5
+models/**/discriminator.weights.h5
+models/**/discriminator_ema.weights.h5
+
+# Logs / caches
+*.log
+.cache/

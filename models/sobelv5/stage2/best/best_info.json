@@ -1,0 +1,11 @@
+{
+  "epoch": 200,
+  "score": 0.9931,
+  "health": 0.9373,
+  "struct_dog": 0.9467,
+  "color_dog": 0.2057,
+  "sharp_dog": 0.3198,
+  "struct_cat": 0.9196,
+  "color_cat": 0.2206,
+  "sharp_cat": 0.3326
+}
