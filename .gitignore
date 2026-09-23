@@ -27,3 +27,5 @@ models/**/discriminator_ema.weights.h5
 # Logs / caches
 *.log
 .cache/
+# CLI outputs (scripts/gan.py)
+outputs/
