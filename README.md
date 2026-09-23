@@ -1,8 +1,8 @@
 <div align="center">
 
-# 🐶 Dogs & Cats by GANs 🐱
+# Dogs & Cats by GANs
 
-**Sinh ảnh mặt chó và mèo 128×128 bằng một Conditional DCGAN, trong đó Discriminator được đưa thêm một kênh cạnh Sobel**
+**Sinh ảnh khuôn mặt chó và mèo kích thước 128×128 bằng Conditional DCGAN có kênh cạnh Sobel ở bộ phân biệt**
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
 ![TensorFlow](https://img.shields.io/badge/TensorFlow-2.15%2B-FF6F00?logo=tensorflow&logoColor=white)
@@ -10,437 +10,448 @@
 ![Dataset](https://img.shields.io/badge/Dataset-AFHQ%20dog%20%2B%20cat-8A2BE2)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-<img src="reports/figures/04_training/sobelv5/stage3/epoch_100.png" width="90%" alt="Ảnh sinh bởi sobelv5">
+<img src="reports/figures/04_training/sobelv5/stage3/epoch_100.png" width="90%" alt="Ảnh sinh bởi mô hình sobelv5">
 
-<sub>Toàn bộ 32 khuôn mặt trên đều do mô hình <code>sobelv5</code> sinh ra (stage 3, epoch 100, bản EMA). Hàng trên là chó, hàng dưới là mèo.</sub>
+<sub>Hình 1. 32 ảnh do mô hình <code>sobelv5</code> sinh ra (giai đoạn 3, epoch 100, trọng số EMA). Hai hàng trên là chó, hai hàng dưới là mèo.</sub>
 
 </div>
 
 > [!NOTE]
-> Đây là dự án **học tập**. Mục tiêu là hiểu cách một GAN có điều kiện học, cách nó hư (mode collapse, Discriminator áp đảo) và cách giữ nó ổn định. Dự án **không** nhằm tối ưu để ra ảnh đẹp nhất hay cạnh tranh với StyleGAN/diffusion.
+> Đề tài được thực hiện với mục đích học tập: tìm hiểu cơ chế huấn luyện của mạng GAN có điều kiện, các hiện tượng thất bại thường gặp và các kỹ thuật ổn định quá trình huấn luyện. Đề tài không đặt mục tiêu tối ưu chất lượng ảnh hay so sánh với các mô hình sinh hiện đại.
 
 ---
 
-## ⚡ Chạy nhanh
+## Khởi động nhanh
 
 ```bash
 git clone --depth 1 https://github.com/peotrannnn/Dogs-and-cats-by-GANs.git
 cd Dogs-and-cats-by-GANs
 pip install -r requirements-web.txt
 
-python scripts/gan.py generate --species both -n 8     # sinh 8 chó + 8 mèo → outputs/
-python scripts/gan.py serve                            # web demo tại http://127.0.0.1:5000
+python scripts/gan.py generate --species both -n 8     # sinh 8 ảnh chó và 8 ảnh mèo vào thư mục outputs/
+python scripts/gan.py serve                            # chạy web demo tại http://127.0.0.1:5000
 ```
 
 ---
 
-## 📑 Mục lục
+## Mục lục
 
-| | | |
-|---|---|---|
-| 1. [Bài toán](#1--phát-biểu-bài-toán) | 6. [Huấn luyện 3 giai đoạn](#6--quy-trình-huấn-luyện-3-giai-đoạn) | 11. [Web demo](#11--web-demo) |
-| 2. [Thử thách](#2--thử-thách) | 7. [Theo dõi và chọn mô hình](#7--theo-dõi-và-chọn-mô-hình) | 12. [Chạy lại pipeline](#12--chạy-lại-toàn-bộ-pipeline) |
-| 3. [Mục tiêu](#3--mục-tiêu-thí-nghiệm) | 8. [Các thí nghiệm](#8--các-thí-nghiệm) | 13. [Cấu trúc thư mục](#13--cấu-trúc-thư-mục) |
-| 4. [Pipeline và notebook](#4--pipeline-và-trọng-tâm-từng-notebook) | 9. [Kết quả](#9--kết-quả) | 14. [Hạn chế](#14--hạn-chế-đã-biết) |
-| 5. [Mô hình](#5--mô-hình) | 10. [Lệnh tiện dụng](#10--lệnh-tiện-dụng-scriptsganpy) | 15. [Tham khảo](#15--tham-khảo-và-giấy-phép) |
+1. [Phát biểu bài toán](#1-phát-biểu-bài-toán)
+2. [Thách thức](#2-thách-thức)
+3. [Mục tiêu và phạm vi](#3-mục-tiêu-và-phạm-vi)
+4. [Quy trình thực hiện và nội dung các notebook](#4-quy-trình-thực-hiện-và-nội-dung-các-notebook)
+5. [Kiến trúc mô hình](#5-kiến-trúc-mô-hình)
+6. [Huấn luyện ba giai đoạn](#6-huấn-luyện-ba-giai-đoạn)
+7. [Theo dõi huấn luyện và chọn mô hình](#7-theo-dõi-huấn-luyện-và-chọn-mô-hình)
+8. [Các thí nghiệm](#8-các-thí-nghiệm)
+9. [Kết quả](#9-kết-quả)
+10. [Công cụ dòng lệnh](#10-công-cụ-dòng-lệnh)
+11. [Web demo](#11-web-demo)
+12. [Tái lập toàn bộ quy trình](#12-tái-lập-toàn-bộ-quy-trình)
+13. [Cấu trúc thư mục](#13-cấu-trúc-thư-mục)
+14. [Hạn chế](#14-hạn-chế)
+15. [Tài liệu tham khảo](#15-tài-liệu-tham-khảo)
 
 ---
 
-## 1. 🧮 Phát biểu bài toán
+## 1. Phát biểu bài toán
 
-Mỗi mẫu dữ liệu gồm một ảnh mặt thú đã chuẩn hoá $x \in [-1, 1]^{128 \times 128 \times 3}$ và một nhãn loài $y \in \lbrace 0, 1 \rbrace$ (0 = chó, 1 = mèo). Ảnh thật được lấy từ một phân phối có điều kiện chưa biết $p_{\text{data}}(x \mid y)$.
+Mỗi mẫu dữ liệu gồm một ảnh khuôn mặt $x \in [-1, 1]^{128 \times 128 \times 3}$ và một nhãn loài $y \in \lbrace 0, 1 \rbrace$, trong đó $y = 0$ là chó và $y = 1$ là mèo. Ảnh thật tuân theo một phân phối có điều kiện chưa biết $p_{\text{data}}(x \mid y)$.
 
-**Mục tiêu:** học một Generator
+Bài toán đặt ra là học một bộ sinh (Generator)
 
-$$
-G_\theta : (z, y) \longmapsto \hat{x} \in [-1,1]^{128\times128\times3}, \qquad z \sim \mathcal{N}(0, I_{100}),
-$$
+```math
+G_\theta : (z, y) \mapsto \hat{x} \in [-1, 1]^{128 \times 128 \times 3}, \qquad z \sim \mathcal{N}(0, I_{100})
+```
 
-sao cho với **mỗi loài** $y$, phân phối ảnh sinh ra $p_G(\hat{x} \mid y)$ gần với $p_{\text{data}}(x \mid y)$.
+sao cho với mỗi loài $y$, phân phối ảnh sinh $p_G(\hat{x} \mid y)$ xấp xỉ phân phối thật $p_{\text{data}}(x \mid y)$.
 
-**Cách học:** $G_\theta$ được huấn luyện đối kháng với một Discriminator $D_\phi(x, y) \in \mathbb{R}$ (trả về logit). $D_\phi$ cố phân biệt ảnh thật với ảnh giả **của cùng một loài**. Hai mạng chơi trò minimax của conditional GAN:
+Bộ sinh được huấn luyện đối kháng với một bộ phân biệt (Discriminator) $D_\phi(x, y) \in \mathbb{R}$. Bộ phân biệt trả về logit và có nhiệm vụ phân biệt ảnh thật với ảnh sinh của cùng một loài. Hai mạng tối ưu bài toán minimax của Conditional GAN [2]:
 
-$$
-\min_{\theta}\ \max_{\phi}\ \ \mathbb{E}_{(x,y) \sim p_{\text{data}}}\big[\log \sigma(D_\phi(x, y))\big] \;+\; \mathbb{E}_{z,\,y}\big[\log\big(1 - \sigma(D_\phi(G_\theta(z, y), y))\big)\big]
-$$
+```math
+\min_{\theta} \max_{\phi} \quad \mathbb{E}_{(x, y) \sim p_{\text{data}}} \big[ \log \sigma(D_\phi(x, y)) \big] + \mathbb{E}_{z, y} \big[ \log \big( 1 - \sigma(D_\phi(G_\theta(z, y), y)) \big) \big]
+```
 
-Trong code, dự án dùng dạng **non-saturating** kèm label smoothing và một số hạng chống collapse (xem [§5.3](#53-hàm-mất-mát)).
+Khi cài đặt, hàm mất mát của bộ sinh được thay bằng dạng non-saturating, kèm theo làm mềm nhãn và một số hạng chống sụp mode (mục 5.3).
 
-| | Mô tả |
+| Thành phần | Mô tả |
 |---|---|
-| **Đầu vào** | Loài `dog` / `cat` và một `seed` để tạo $z$ |
-| **Đầu ra** | Một ảnh RGB 128×128 |
-| **Dữ liệu** | 9 950 ảnh train, 866 ảnh validation (AFHQ) |
-| **Phần cứng** | 1 GPU trên Google Colab, ~37–40 s mỗi epoch |
+| Đầu vào | Loài (`dog` hoặc `cat`) và một số `seed` dùng để tạo vector nhiễu $z$ |
+| Đầu ra | Một ảnh RGB kích thước 128×128 |
+| Dữ liệu | 9 950 ảnh huấn luyện, 866 ảnh kiểm định (AFHQ) |
+| Tài nguyên | 1 GPU trên Google Colab, khoảng 37–40 giây mỗi epoch |
 
 ---
 
-## 2. 🧗 Thử thách
+## 2. Thách thức
 
-| Thử thách | Vì sao khó | Biểu hiện trong dự án |
+| Thách thức | Nguyên nhân | Biểu hiện trong đề tài |
 |---|---|---|
-| **Mode collapse** | G tìm được một khuôn mặt "lừa" được D rồi lặp lại mãi | Thí nghiệm `default`: mọi $z$ đều ra cùng một con chó, cùng một con mèo |
-| **D áp đảo G** | Khi D quá giỏi, gradient gửi về G gần như vô dụng | Cuối stage 1, `disc_acc` ≈ **0.97** |
-| **Mờ và sắc nét** | Instance noise và EMA giúp ổn định nhưng làm ảnh mờ; ép ảnh sắc lại dễ gây artifact | `sobel_v2` vỡ thành các mảng texture |
-| **Loss không đo chất lượng** | Loss của G/D chỉ dao động, không cho biết ảnh có đẹp hơn không | Phải tự thiết kế metric `struct` / `color` / `sharp` |
-| **Một mạng cho hai loài** | Chó và mèo dùng chung trọng số, chất lượng có thể lệch nhau | Từ EDA: ảnh mèo sắc nét gấp khoảng 2 lần ảnh chó |
-| **Colab hay ngắt** | Một lần chạy đầy đủ mất khoảng 5 giờ | Cần checkpoint, cơ chế resume và snapshot để quay lại |
+| Sụp mode (mode collapse) | Bộ sinh tìm được một kiểu ảnh đánh lừa được bộ phân biệt và lặp lại kiểu ảnh đó | Thí nghiệm `default`: mọi vector nhiễu đều cho ra cùng một khuôn mặt ở mỗi loài |
+| Bộ phân biệt áp đảo | Khi bộ phân biệt quá mạnh, gradient truyền về bộ sinh gần như không còn thông tin | Cuối giai đoạn 1, độ chính xác của bộ phân biệt đạt khoảng 0.97 |
+| Đánh đổi giữa độ nét và độ ổn định | Instance noise và EMA giúp ổn định nhưng làm ảnh mờ; ép ảnh sắc nét dễ sinh nhiễu | Thí nghiệm `sobel_v2` cho ảnh vỡ thành các mảng vân lặp lại |
+| Không có hàm mất mát đo chất lượng ảnh | Giá trị loss của hai mạng dao động và không phản ánh chất lượng ảnh | Cần xây dựng các chỉ số riêng: `struct`, `color`, `sharp` |
+| Hai loài dùng chung một mạng | Chó và mèo chia sẻ trọng số nên chất lượng hai loài có thể chênh lệch | Phân tích dữ liệu cho thấy ảnh mèo có độ nét gấp khoảng hai lần ảnh chó |
+| Giới hạn tài nguyên | Một lần huấn luyện đầy đủ kéo dài khoảng 5 giờ, phiên Colab có thể bị ngắt | Cần cơ chế lưu checkpoint, tiếp tục huấn luyện và lưu snapshot |
 
 ---
 
-## 3. 🎯 Mục tiêu thí nghiệm
+## 3. Mục tiêu và phạm vi
 
-<table>
-<tr><th>✅ Nằm trong phạm vi</th><th>❌ Không nằm trong phạm vi</th></tr>
-<tr valign="top"><td>
+**Trong phạm vi đề tài**
 
-- Một pipeline sạch, chạy lại được từ đầu đến cuối: dữ liệu → EDA → tiền xử lý → huấn luyện → đánh giá → demo
-- Ảnh **nhận ra được**, **đa dạng** và **đúng loài** theo nhãn
-- Hiểu tác động của từng kỹ thuật: kênh phụ cho D, TTUR, instance noise, DiffAugment, EMA, mode-seeking
-- Quá trình huấn luyện **quan sát được**: lưới ảnh với seed cố định, metric theo loài, checkpoint quay lại được
+- Xây dựng quy trình hoàn chỉnh và tái lập được: thu thập dữ liệu, phân tích, tiền xử lý, huấn luyện, đánh giá và demo.
+- Sinh được ảnh nhận diện được loài, đa dạng và đúng với nhãn điều kiện.
+- Khảo sát tác động của từng kỹ thuật: kênh phụ cho bộ phân biệt, TTUR, instance noise, DiffAugment, EMA và mode-seeking loss.
+- Theo dõi được quá trình huấn luyện thông qua lưới ảnh sinh từ nhiễu cố định, các chỉ số tính riêng cho từng loài và hệ thống checkpoint.
 
-</td><td>
+**Ngoài phạm vi đề tài**
 
-- Tối ưu FID/KID. Phần tính có sẵn trong notebook 05 nhưng tắt mặc định
-- Ảnh chân thực như ảnh chụp
-- So sánh với StyleGAN hay diffusion
-- Dò hyperparameter một cách hệ thống. Các giá trị được chọn thủ công qua từng lần thử
-
-</td></tr>
-</table>
+- Tối ưu FID/KID. Mã tính các chỉ số này có trong notebook 05 nhưng tắt theo mặc định.
+- Sinh ảnh có độ chân thực như ảnh chụp.
+- So sánh với StyleGAN hoặc các mô hình khuếch tán (diffusion).
+- Tìm kiếm siêu tham số một cách hệ thống. Các giá trị trong đề tài được điều chỉnh thủ công qua từng lần thử.
 
 ---
 
-## 4. 🗺️ Pipeline và trọng tâm từng notebook
+## 4. Quy trình thực hiện và nội dung các notebook
 
 ```mermaid
 flowchart LR
-    A["01 · Tải dữ liệu<br/>AFHQ dog + cat"] --> B["02 · EDA<br/>hiểu dữ liệu"]
-    B --> C["03 · Tiền xử lý<br/>lọc · chia · resize"]
-    C --> D["04 · Huấn luyện<br/>3 stage trên Colab"]
-    D --> E["05 · Đánh giá<br/>metric + lưới ảnh"]
-    D --> F["Web demo<br/>src/web_server.py"]
-    D --> G["CLI<br/>scripts/gan.py"]
+    A["01. Thu thập dữ liệu"] --> B["02. Phân tích dữ liệu"]
+    B --> C["03. Tiền xử lý"]
+    C --> D["04. Huấn luyện (Colab)"]
+    D --> E["05. Đánh giá"]
+    D --> F["Web demo"]
+    D --> G["Công cụ dòng lệnh"]
 ```
 
-Mọi notebook đều song ngữ Anh–Việt, theo cùng một khung: *Mục tiêu → Lưu ý → Code → Kết quả → Tóm tắt*. Notebook sau chỉ đọc **manifest CSV** do notebook trước tạo ra, không quét lại ổ đĩa.
+Các notebook được viết song ngữ Anh–Việt theo cùng một cấu trúc: mục tiêu, ghi chú, mã nguồn, kết quả và tóm tắt. Mỗi notebook chỉ đọc dữ liệu từ các tệp manifest (CSV) do notebook trước tạo ra, không quét lại thư mục ảnh.
 
-### 📥 `01_download_data.ipynb`: thu thập dữ liệu
+### 4.1. `01_download_data.ipynb`: thu thập dữ liệu
 
-> **Trọng tâm:** có được một tập ảnh sạch, **gắn nhãn loài** và một manifest làm nguồn tham chiếu duy nhất cho mọi bước sau.
+**Mục đích chính:** tạo một tập ảnh sạch có gắn nhãn loài, cùng một tệp manifest dùng làm nguồn tham chiếu cho các bước sau.
 
-- Tải mirror Kaggle `andrewmvd/animal-faces` bằng `kagglehub` (không cần đăng nhập) thẳng vào `data/raw/_kaggle_staging/`, khoảng 696 MB.
-- Lọc theo tên thư mục cha: giữ `dog` và `cat`, **bỏ `wild`**. Ảnh được **di chuyển** (không sao chép) và đổi tên thành `dog_00000_…`, `cat_00000_…`, để nhìn tên file là biết loài.
-- Kiểm tra từng ảnh bằng `PIL.Image.verify()`: **10 892/10 892** ảnh hợp lệ, tất cả 512×512.
-- Đầu ra: `data/raw/manifest.csv` gồm các cột `filepath, species, filesize_kb, width, height, is_valid`, và lưới mẫu `reports/figures/01_sample_grid.png`.
+- Tải bộ dữ liệu `andrewmvd/animal-faces` (bản sao của AFHQ [8] trên Kaggle) bằng thư viện `kagglehub`. Dung lượng khoảng 696 MB, không cần đăng nhập.
+- Giữ lại hai miền `dog` và `cat`, loại miền `wild`. Tệp ảnh được di chuyển và đổi tên theo dạng `dog_00000_...`, `cat_00000_...` để nhận biết loài từ tên tệp.
+- Kiểm tra tính toàn vẹn từng ảnh bằng `PIL.Image.verify()`. Kết quả: 10 892/10 892 ảnh hợp lệ, cùng kích thước 512×512.
+- Đầu ra gồm `data/raw/manifest.csv` (các cột `filepath`, `species`, `filesize_kb`, `width`, `height`, `is_valid`) và lưới ảnh mẫu `reports/figures/01_sample_grid.png`.
 
-### 🔍 `02_eda.ipynb`: phân tích khám phá dữ liệu
+### 4.2. `02_eda.ipynb`: phân tích khám phá dữ liệu
 
-> **Trọng tâm:** tìm ra những điểm **khác nhau giữa chó và mèo** và những **vấn đề chất lượng** để quyết định cách tiền xử lý.
+**Mục đích chính:** xác định sự khác biệt giữa ảnh chó và ảnh mèo, đồng thời phát hiện các vấn đề chất lượng dữ liệu để làm căn cứ cho bước tiền xử lý.
 
-Notebook đọc mỗi ảnh đúng **một lần** và trích 5 đặc trưng: độ sáng, độ mờ (phương sai Laplacian), màu RGB trung bình, mật độ cạnh Canny và perceptual hash.
+Mỗi ảnh được đọc một lần để trích xuất năm đặc trưng: độ sáng, độ nét (phương sai của toán tử Laplacian), màu trung bình theo kênh RGB, mật độ cạnh Canny và mã băm cảm nhận (perceptual hash).
 
-| Phân tích | Phát hiện chính |
+| Nội dung phân tích | Kết quả |
 |---|---|
-| Cân bằng lớp | 48.1 % chó / 51.9 % mèo → **không cần** đặt trọng số theo lớp |
-| Độ sáng | Gần như giống nhau (trung bình ~118/255 cho cả hai loài) |
-| Độ mờ (median) | Mèo **988**, chó **475** → ảnh mèo sắc nét gấp khoảng 2 lần |
-| Mật độ cạnh Canny (median) | Mèo 0.084, chó 0.053 → mèo có nhiều chi tiết lông/ria hơn |
-| Texture LBP (2 000 ảnh mẫu) | Entropy của mèo cao hơn một chút (3.12 so với 3.08) |
-| Ảnh trùng (pHash) | 5 nhóm trùng hệt nhau, 75 cặp gần trùng (Hamming ≤ 5), **tập trung ở mèo** (60/75) |
-| PCA trên 6 đặc trưng | 2 thành phần chính giải thích 89.7 % phương sai; hai loài tách nhau một phần → củng cố việc dùng điều kiện theo loài |
-| Soi ảnh ngoại lai | Chỉ **1** khung hình thật sự hỏng (tối đen, không có con vật); các ảnh ngoại lai khác là ảnh thật |
+| Cân bằng lớp | 48.1 % chó, 51.9 % mèo; không cần đánh trọng số theo lớp |
+| Độ sáng | Tương đương giữa hai loài (trung bình khoảng 118/255) |
+| Độ nét (trung vị) | Mèo 988, chó 475; ảnh mèo nét gấp khoảng hai lần |
+| Mật độ cạnh Canny (trung vị) | Mèo 0.084, chó 0.053; ảnh mèo có nhiều chi tiết lông và ria hơn |
+| Kết cấu LBP (mẫu 2 000 ảnh) | Entropy của mèo cao hơn không đáng kể (3.12 so với 3.08) |
+| Ảnh trùng lặp | 5 nhóm trùng hoàn toàn và 75 cặp gần trùng (khoảng cách Hamming ≤ 5), trong đó 60/75 cặp thuộc lớp mèo |
+| PCA trên 6 đặc trưng | Hai thành phần đầu giải thích 89.7 % phương sai. Hai loài chồng lấn phần lớn, chỉ lớp mèo phân tán rộng hơn theo PC2. Các đặc trưng cấp thấp không đủ để phân biệt loài, vì vậy mô hình cần nhận nhãn loài làm điều kiện |
+| Ảnh ngoại lai | Chỉ một ảnh thực sự hỏng (khung hình gần như đen hoàn toàn); các ảnh ngoại lai còn lại là ảnh hợp lệ |
 
-<p align="center"><img src="reports/figures/02_eda/07_average_images.png" width="55%" alt="Ảnh trung bình của mỗi loài"><br><sub>Ảnh trung bình của mỗi loài: khuôn mặt được căn giữa rất đều, nên DCGAN nhỏ vẫn học được.</sub></p>
+<p align="center"><img src="reports/figures/02_eda/07_average_images.png" width="55%" alt="Ảnh trung bình của mỗi loài"><br><sub>Hình 2. Ảnh trung bình của mỗi loài. Khuôn mặt được căn giữa đồng đều, thuận lợi cho một mạng DCGAN có kích thước nhỏ.</sub></p>
 
-> Canny và LBP **chỉ dùng trong EDA** vì chúng không khả vi. Trong vòng huấn luyện, D dùng Sobel/Laplacian, là các phép khả vi.
+Các đặc trưng Canny và LBP không khả vi nên chỉ được dùng trong bước phân tích. Trong quá trình huấn luyện, bộ phân biệt sử dụng toán tử Sobel hoặc Laplacian vì hai toán tử này khả vi.
 
-### 🧹 `03_preprocessing_128.ipynb` (và `_64`): tiền xử lý
+### 4.3. `03_preprocessing_128.ipynb` và `03_preprocessing_64.ipynb`: tiền xử lý
 
-> **Trọng tâm:** biến những phát hiện của EDA thành các **quy tắc lọc có thể giải thích được**, rồi xuất một tập dữ liệu sẵn sàng để train.
+**Mục đích chính:** chuyển các kết quả phân tích thành những quy tắc lọc dữ liệu có căn cứ, sau đó xuất tập dữ liệu sẵn sàng cho huấn luyện.
 
-1. **Loại ảnh hỏng:** chỉ loại khi **cả hai** điều kiện cùng đúng: `gray_std < 10` **và** `blur_var < 50`. Như vậy ảnh mờ nhưng vẫn là ảnh thật được giữ lại → loại **1** ảnh.
-2. **Loại ảnh trùng:** so pHash **trong cùng một loài** với ngưỡng Hamming ≤ 5, gom nhóm bằng **Union-Find** (bắt được chuỗi A≈B≈C), trong mỗi nhóm giữ ảnh **sắc nét nhất** → loại **75** ảnh.
-3. **Chia train/val có phân tầng theo loài** theo tỉ lệ 92/8, `seed=42`. Tập validation nhỏ vì GAN không cần tập validation để chọn mô hình; nó chỉ dùng để so metric giữa ảnh thật và ảnh sinh.
-4. **Resize 512 → 128** bằng `cv2.INTER_AREA` để tránh răng cưa.
-5. **Chuẩn hoá** về $[-1, 1]$ (khớp `tanh`) **lúc train**. Ảnh trên đĩa vẫn là uint8, và notebook có kiểm tra rằng chuyển qua rồi chuyển lại khớp tuyệt đối.
-6. **Augmentation:** chỉ **lật ngang**, áp ngay khi train. Không lật dọc hay xoay vì khuôn mặt sẽ sai giải phẫu.
+1. **Loại ảnh hỏng.** Một ảnh chỉ bị loại khi đồng thời thỏa `gray_std < 10` và `blur_var < 50`. Quy tắc kép này giữ lại các ảnh mờ nhưng hợp lệ. Có 1 ảnh bị loại.
+2. **Loại ảnh trùng lặp.** So sánh mã băm cảm nhận trong cùng một loài với ngưỡng Hamming ≤ 5, gom nhóm bằng cấu trúc Union-Find (xử lý được chuỗi A ≈ B ≈ C) và giữ lại ảnh có độ nét cao nhất trong mỗi nhóm. Có 75 ảnh bị loại.
+3. **Chia tập huấn luyện và kiểm định** theo tỷ lệ 92/8, phân tầng theo loài, `seed = 42`. Tập kiểm định có kích thước nhỏ vì chỉ dùng để so sánh chỉ số giữa ảnh thật và ảnh sinh, không dùng để chọn mô hình.
+4. **Thay đổi kích thước** từ 512×512 xuống 128×128 bằng nội suy `cv2.INTER_AREA` nhằm hạn chế hiện tượng răng cưa.
+5. **Chuẩn hóa** giá trị điểm ảnh về $[-1, 1]$ cho khớp với hàm kích hoạt `tanh` ở đầu ra bộ sinh. Việc chuẩn hóa được thực hiện khi nạp dữ liệu; ảnh trên đĩa vẫn lưu ở dạng 8 bit. Notebook có kiểm tra phép biến đổi ngược cho kết quả trùng khớp hoàn toàn.
+6. **Tăng cường dữ liệu** chỉ gồm lật ngang ngẫu nhiên, thực hiện khi huấn luyện. Lật dọc và xoay không được sử dụng vì làm sai cấu trúc giải phẫu của khuôn mặt.
 
 | | Chó | Mèo | Tổng |
 |---|---:|---:|---:|
-| Ảnh gốc | 5 239 | 5 653 | 10 892 |
-| − hỏng / − trùng | 0 / −15 | −1 / −60 | −76 |
-| **Train** | **4 806** | **5 144** | **9 950** |
-| **Validation** | **418** | **448** | **866** |
+| Ảnh ban đầu | 5 239 | 5 653 | 10 892 |
+| Loại do hỏng | 0 | 1 | 1 |
+| Loại do trùng lặp | 15 | 60 | 75 |
+| Tập huấn luyện | 4 806 | 5 144 | 9 950 |
+| Tập kiểm định | 418 | 448 | 866 |
 
-Đầu ra: `data/processed/images_128/`, `train_manifest.csv`, `val_manifest.csv`, `removed_images_log.csv`. Bản `_64` làm y hệt nhưng ra ảnh 64×64 và các file `*_64.csv`, không ghi đè lên bản 128.
+Đầu ra gồm thư mục `data/processed/images_128/` cùng các tệp `train_manifest.csv`, `val_manifest.csv` và `removed_images_log.csv`. Phiên bản `_64` thực hiện các bước tương tự cho ảnh 64×64 và ghi ra các tệp có hậu tố `_64`.
 
-### 🏋️ `04_model_training_5th_attempt.ipynb`: huấn luyện `sobelv5` (mô hình chính)
+### 4.4. `04_model_training_5th_attempt.ipynb`: huấn luyện mô hình `sobelv5`
 
-> **Trọng tâm:** một kiến trúc duy nhất, huấn luyện qua **3 stage**, mỗi stage có **một nhiệm vụ riêng**, cộng với hệ thống theo dõi và checkpoint đủ để không bao giờ mất một lần chạy.
+**Mục đích chính:** huấn luyện một kiến trúc duy nhất qua ba giai đoạn, mỗi giai đoạn giải quyết một nhiệm vụ riêng, kèm theo hệ thống theo dõi và lưu checkpoint đủ tin cậy để không mất kết quả khi phiên làm việc bị ngắt.
 
-Notebook chạy trên **Colab + Google Drive** (`MyDrive/dog-gan-project`) và chép ảnh ra ổ đĩa cục bộ của VM để đọc nhanh hơn. Nội dung theo thứ tự:
+Notebook chạy trên Google Colab, dữ liệu và kết quả lưu tại `MyDrive/dog-gan-project`. Ảnh được sao chép vào ổ đĩa cục bộ của máy ảo để tăng tốc độ đọc. Nội dung chính:
 
-- `tf.data`: đọc ảnh, chuẩn hoá về $[-1, 1]$, lật ngang, chia batch 128, prefetch.
-- Kênh Sobel và kênh loài cho D ([§5.2](#52-discriminator--279-m-tham-số)).
-- Kiến trúc G/D, hàm loss, các kỹ thuật ổn định ([§5](#5--mô-hình)).
-- `make_train_step()`: mỗi stage biên dịch một `tf.function` riêng với các cờ của stage đó (có dùng noise, DiffAugment hay mode-seeking không).
-- Metric theo dõi, lưới ảnh 1920×1080 (có thể ghép thẳng thành video 1080p), checkpoint 3 tầng.
-- `run_stage()`: một hàm chạy được mọi stage, tự resume, tự nạp trọng số từ stage trước, chứa luật dừng sớm.
-- Cuối notebook: gộp `history.csv` của cả 3 stage thành một dòng thời gian.
+- Đường ống dữ liệu `tf.data`: đọc ảnh, chuẩn hóa, lật ngang, chia batch 128 và nạp trước (prefetch).
+- Kênh Sobel và kênh loài làm đầu vào bổ sung cho bộ phân biệt (mục 5.2).
+- Định nghĩa kiến trúc, hàm mất mát và các kỹ thuật ổn định (mục 5).
+- Hàm `make_train_step()` tạo một `tf.function` riêng cho từng giai đoạn, với các tùy chọn (instance noise, DiffAugment, mode-seeking) được cố định khi biên dịch.
+- Các chỉ số theo dõi, lưới ảnh kích thước 1920×1080 (ghép trực tiếp thành video được) và hệ thống checkpoint ba tầng.
+- Hàm `run_stage()` thực thi một giai đoạn bất kỳ: tự tiếp tục từ checkpoint, tự nạp trọng số của giai đoạn trước và áp dụng quy tắc dừng sớm.
+- Tổng hợp tệp `history.csv` của cả ba giai đoạn thành một chuỗi thời gian duy nhất.
 
-### 🧪 `04_model_training_kinkySobel.ipynb`: bản 64×64
+### 4.5. `04_model_training_kinkySobel.ipynb`: phiên bản 64×64
 
-> **Trọng tâm:** cùng công thức với `sobelv5` nhưng ở **64×64** (G bỏ bớt một tầng ConvT, D bỏ bớt một tầng Conv), và lưu thêm checkpoint ở các epoch **1, 3, 5, 10, 15, 25, 50, 100, 150…** vào `web_progression/` kèm `manifest.json`. Mục đích là làm animation "tiến hoá" ngay từ những epoch rất sớm. Repo chưa có kết quả của bản này.
+Notebook áp dụng cùng quy trình với `sobelv5` cho ảnh 64×64: bộ sinh bớt một lớp tích chập chuyển vị, bộ phân biệt bớt một lớp tích chập. Ngoài các checkpoint thông thường, notebook còn lưu thêm trọng số tại các epoch 1, 3, 5, 10, 15, 25, 50, 100 và 150 vào thư mục `web_progression/` kèm tệp `manifest.json`, nhằm phục vụ minh họa quá trình học từ những epoch đầu tiên. Kết quả của phiên bản này chưa được đưa vào kho mã.
 
-### 📊 `05_evaluation_report.ipynb`: đánh giá
+### 4.6. `05_evaluation_report.ipynb`: đánh giá mô hình
 
-> **Trọng tâm:** đánh giá mô hình đã train **mà không train lại**, trên máy local, và kết quả **tái lập được**.
+**Mục đích chính:** đánh giá mô hình đã huấn luyện trên máy cục bộ mà không huấn luyện lại, và đảm bảo kết quả tái lập được.
 
-- Tự tìm thư mục model, lập bảng tất cả checkpoint, chọn theo thứ tự ưu tiên: `stage3/best` → EMA → …
-- Tổng hợp `history.csv` và `best_info.json` → bảng tóm tắt cho mỗi stage.
-- Lưới ảnh **16 chó + 16 mèo với seed cố định** để kiểm tra bằng mắt: mắt, mũi, tai, bộ phận bị lặp, collapse.
-- `struct / color / sharp` của ảnh sinh **so với ảnh validation thật**.
-- So sánh best của 3 stage trên **cùng một bộ $z$**.
-- FID/KID dùng InceptionV3 (tuỳ chọn, bật bằng `RUN_INCEPTION_METRICS = True`).
-- **Seed bank** 64 ảnh mỗi loài, có đánh số, kèm `seed_bank_latents.npz` để tái tạo đúng ảnh nào đẹp hay xấu.
-- Đầu ra: `notebooks/evaluation/sobelv5/` (`figures/`, `tables/`, `evaluation_summary.json`).
+- Tự động tìm thư mục mô hình, lập danh sách checkpoint và chọn theo thứ tự ưu tiên (`stage3/best`, sau đó đến EMA, …).
+- Tổng hợp `history.csv` và `best_info.json` thành bảng tóm tắt theo từng giai đoạn.
+- Sinh lưới 16 ảnh chó và 16 ảnh mèo từ nhiễu cố định để đánh giá trực quan: hình dạng mắt, mũi, tai; bộ phận bị lặp; dấu hiệu sụp mode.
+- Tính `struct`, `color`, `sharp` của ảnh sinh và so sánh với ảnh thật trong tập kiểm định.
+- So sánh checkpoint tốt nhất của ba giai đoạn trên cùng một tập vector nhiễu.
+- Tính FID/KID bằng InceptionV3 (tùy chọn, bật bằng `RUN_INCEPTION_METRICS = True`).
+- Sinh 64 ảnh mỗi loài có đánh số và lưu các vector nhiễu vào `seed_bank_latents.npz`, cho phép tái tạo chính xác từng ảnh.
+- Đầu ra lưu tại `notebooks/evaluation/sobelv5/` (`figures/`, `tables/`, `evaluation_summary.json`).
 
 ---
 
-## 5. 🧠 Mô hình
+## 5. Kiến trúc mô hình
 
-### 5.1 Generator (~3.21 M tham số)
-
-```text
-z ∈ ℝ¹⁰⁰ ─────────────┐
-                      ├─ concat(150) → Dense(8·8·256) → BN → LeakyReLU(0.2) → reshape 8×8×256
-y → Embedding(2, 50) ─┘
-   → ConvT(128, k4, s2) → BN → LReLU      16×16×128
-   → ConvT( 64, k4, s2) → BN → LReLU      32×32×64
-   → ConvT( 32, k4, s2) → BN → LReLU      64×64×32
-   → ConvT(  3, k4, s2) → tanh           128×128×3
-```
-
-### 5.2 Discriminator (~2.79 M tham số)
-
-D nhận **5 kênh**: ảnh RGB, **kênh loài** và **kênh Sobel**:
-
-$$
-\text{input}_D = \big[\ x \ \Vert\ c(y) \ \Vert\ S(x)\ \big] \in \mathbb{R}^{128\times128\times5},
-\qquad c(y) = (2y-1)\cdot\mathbf{1}_{128\times128}
-$$
-
-- $c(y)$ là một ảnh hằng: **−1 cho chó, +1 cho mèo**. Nhờ kênh này, D trả lời được câu hỏi *"đây có phải một con **mèo** thật không"*.
-- $S(x)$ là độ lớn gradient Sobel trên ảnh xám, min-max chuẩn hoá từng ảnh về $[-1,1]$, tính ngay trong model nên **khả vi**. Kênh này buộc D nhìn vào chất lượng đường viền, và qua đó đẩy G tạo cạnh rõ thay vì những mảng màu nhoè.
+### 5.1. Bộ sinh (khoảng 3.21 triệu tham số)
 
 ```text
-128×128×5 → Conv 64  k4 s2 → LReLU → Dropout 0.3          64×64
-          → Conv 128       → BN → LReLU → Dropout 0.3     32×32
-          → Conv 256       → BN → LReLU                   16×16
-          → Conv 512       → BN → LReLU                    8×8
-          → Flatten → Dense(1)   (logit)
+z (100) ------------------+
+                          +-- concat (150) -> Dense 8*8*256 -> BN -> LeakyReLU(0.2) -> reshape 8x8x256
+y -> Embedding(2, 50) ----+
+    -> ConvTranspose(128, k=4, s=2) -> BN -> LeakyReLU      16x16x128
+    -> ConvTranspose( 64, k=4, s=2) -> BN -> LeakyReLU      32x32x64
+    -> ConvTranspose( 32, k=4, s=2) -> BN -> LeakyReLU      64x64x32
+    -> ConvTranspose(  3, k=4, s=2) -> tanh                128x128x3
 ```
 
-D **không** dùng Spectral Norm hay minibatch-stddev. Mọi biện pháp hãm D đều nằm ở **phía huấn luyện**, nên kiến trúc giữ nguyên qua cả 3 stage.
+### 5.2. Bộ phân biệt (khoảng 2.79 triệu tham số)
 
-### 5.3 Hàm mất mát
+Đầu vào của bộ phân biệt gồm năm kênh: ảnh RGB, kênh loài và kênh cạnh Sobel.
 
-Ký hiệu $\hat{x} = G(z,y)$ và $T(\cdot)$ là phép biến đổi **giống nhau cho ảnh thật và ảnh giả** trước khi vào D (instance noise, DiffAugment).
+```math
+\mathrm{input}_D = \big[ x \;\Vert\; c(y) \;\Vert\; S(x) \big] \in \mathbb{R}^{128 \times 128 \times 5}, \qquad c(y) = (2y - 1) \cdot \mathbf{1}_{128 \times 128}
+```
 
-$$
-\mathcal{L}_D = \mathrm{BCE}\big(\mathbf{0.9},\ D(T(x), y)\big) + \mathrm{BCE}\big(0,\ D(T(\hat{x}), y)\big)
-\qquad \text{(one-sided label smoothing)}
-$$
+- $c(y)$ là một ảnh hằng, nhận giá trị −1 với chó và +1 với mèo. Kênh này cho phép bộ phân biệt đánh giá ảnh có phải là một con mèo thật hay không, chứ không chỉ là một con vật thật.
+- $S(x)$ là độ lớn gradient Sobel của ảnh xám, được chuẩn hóa min–max về $[-1, 1]$ cho từng ảnh. Phép tính nằm trong mô hình nên khả vi. Kênh này cung cấp trực tiếp thông tin về đường biên, qua đó thúc đẩy bộ sinh tạo ra các cạnh rõ nét thay vì các vùng màu nhòe.
 
-$$
-\mathcal{L}_G = \mathrm{BCE}\big(1,\ D(T(\hat{x}), y)\big) \;-\; \lambda_{ms}\,\mathcal{L}_{ms}
-\qquad \text{(non-saturating + mode-seeking)}
-$$
+```text
+128x128x5 -> Conv 64  (k=4, s=2) -> LeakyReLU -> Dropout 0.3           64x64
+          -> Conv 128            -> BN -> LeakyReLU -> Dropout 0.3     32x32
+          -> Conv 256            -> BN -> LeakyReLU                    16x16
+          -> Conv 512            -> BN -> LeakyReLU                     8x8
+          -> Flatten -> Dense(1)  (logit)
+```
 
-**Mode-seeking** (chỉ bật ở stage 3): batch được xếp sao cho mẫu $i$ và $i + B/2$ có **cùng loài** nhưng khác $z$:
+Bộ phân biệt không sử dụng Spectral Normalization hay minibatch standard deviation. Việc kiềm chế bộ phân biệt được thực hiện hoàn toàn ở phía huấn luyện, nhờ đó kiến trúc được giữ nguyên qua cả ba giai đoạn và trọng số có thể chuyển tiếp giữa các giai đoạn.
 
-$$
-\mathcal{L}_{ms} = \frac{2}{B}\sum_{i=1}^{B/2} \frac{\operatorname{mean}\,\lvert G(z_i, y_i) - G(z_{i+B/2}, y_i)\rvert}{\operatorname{mean}\,\lvert z_i - z_{i+B/2}\rvert + \epsilon}
-$$
+### 5.3. Hàm mất mát
 
-Số hạng này thưởng cho *"$z$ khác thì ảnh phải khác"*. Nếu 16 vector $z$ cùng ra một khuôn mặt, $\mathcal{L}_{ms} \to 0$ và gradient sẽ đẩy G ra khỏi trạng thái đó. **Optimizer:** Adam với $\beta_1 = 0.5$.
+Gọi $\hat{x} = G(z, y)$ là ảnh sinh và $T(\cdot)$ là phép biến đổi áp dụng như nhau cho ảnh thật và ảnh sinh trước khi đưa vào bộ phân biệt (instance noise, DiffAugment).
 
-### 5.4 Các kỹ thuật ổn định
+Hàm mất mát của bộ phân biệt sử dụng làm mềm nhãn một phía (nhãn thật bằng 0.9):
 
-| Kỹ thuật | Công thức / cách làm | Mục đích |
+```math
+\mathcal{L}_D = \mathrm{BCE}\big(0.9,\ D(T(x), y)\big) + \mathrm{BCE}\big(0,\ D(T(\hat{x}), y)\big)
+```
+
+Hàm mất mát của bộ sinh gồm thành phần non-saturating và số hạng mode-seeking (chỉ bật ở giai đoạn 3):
+
+```math
+\mathcal{L}_G = \mathrm{BCE}\big(1,\ D(T(\hat{x}), y)\big) - \lambda_{ms} \, \mathcal{L}_{ms}
+```
+
+Để tính số hạng mode-seeking [6], batch được sắp xếp sao cho mẫu thứ $i$ và mẫu thứ $i + B/2$ có cùng loài nhưng khác vector nhiễu:
+
+```math
+\mathcal{L}_{ms} = \frac{2}{B} \sum_{i=1}^{B/2} \frac{\mathrm{mean} \left| G(z_i, y_i) - G(z_{i+B/2}, y_i) \right|}{\mathrm{mean} \left| z_i - z_{i+B/2} \right| + \epsilon}
+```
+
+Số hạng này khuyến khích các vector nhiễu khác nhau cho ra các ảnh khác nhau. Nếu nhiều vector nhiễu cùng cho một khuôn mặt thì $\mathcal{L}_{ms}$ tiến về 0, và gradient sẽ đẩy bộ sinh ra khỏi trạng thái đó. Cả hai mạng dùng bộ tối ưu Adam với $\beta_1 = 0.5$.
+
+### 5.4. Các kỹ thuật ổn định huấn luyện
+
+| Kỹ thuật | Cách thực hiện | Mục đích |
 |---|---|---|
-| **TTUR** | $\eta_D < \eta_G$ (stage 2: $\eta_D = \eta_G/3$) | Làm chậm D |
-| **Instance noise** | $T(x)=x+\sigma(e)\,\varepsilon$, $\ \sigma(e)=\sigma_0\max\big(0,\,1-\tfrac{e-1}{0.6E}\big)$ | Làm mềm ranh giới quyết định của D, giảm dần về 0 |
-| **DiffAugment** | Dịch ngẫu nhiên tối đa ±1/8 ảnh, phần trống điền 0, áp cho **cả** ảnh thật lẫn ảnh giả | D không học thuộc được; phép dịch không "rò" vào ảnh G sinh ra |
-| **EMA của G** | $\theta_{\text{EMA}} \leftarrow \beta\,\theta_{\text{EMA}} + (1-\beta)\,\theta$, mỗi epoch | Bản G mượt hơn; đây là bản dùng để sinh ảnh và export |
-| **LR schedule** | Giữ nguyên đến $a\cdot E$, sau đó giảm tuyến tính về $\rho \cdot \eta_0$ | Tinh chỉnh dần ở cuối stage |
-| **Label smoothing** | Nhãn thật = 0.9 | D bớt tự tin |
+| TTUR [4] | Tốc độ học của bộ phân biệt nhỏ hơn bộ sinh (giai đoạn 2: bằng một phần ba) | Kiềm chế bộ phân biệt |
+| Instance noise [5] | Cộng nhiễu Gauss vào đầu vào của bộ phân biệt, độ lệch chuẩn giảm tuyến tính về 0 trong 60 % đầu giai đoạn | Làm mềm biên quyết định của bộ phân biệt |
+| DiffAugment [7] | Dịch chuyển ngẫu nhiên tối đa 1/8 kích thước ảnh, áp dụng cho cả ảnh thật và ảnh sinh | Tránh bộ phân biệt ghi nhớ tập dữ liệu thật; phép biến đổi không lọt vào ảnh sinh |
+| EMA của bộ sinh | Duy trì bản trung bình trượt của trọng số, cập nhật mỗi epoch | Tạo bản bộ sinh ổn định hơn, dùng để sinh ảnh và xuất mô hình |
+| Lịch tốc độ học | Giữ nguyên đến một tỷ lệ $a$ của giai đoạn, sau đó giảm tuyến tính đến $\rho$ lần giá trị ban đầu | Tinh chỉnh ở cuối giai đoạn |
+| Làm mềm nhãn | Nhãn của ảnh thật bằng 0.9 | Giảm mức tự tin quá cao của bộ phân biệt |
 
-Các kỹ thuật này **chỉ tác động lúc train**: ảnh G sinh ra để lưu hay hiển thị không bao giờ bị augment.
+Công thức của instance noise, EMA và lịch tốc độ học ($e$ là epoch hiện tại, $E$ là số epoch của giai đoạn):
+
+```math
+\sigma(e) = \sigma_0 \max\left(0,\ 1 - \frac{e - 1}{0.6E}\right), \qquad
+\theta_{\mathrm{EMA}} \leftarrow \beta \, \theta_{\mathrm{EMA}} + (1 - \beta) \, \theta, \qquad
+\eta(e) = \eta_0 \cdot \begin{cases} 1 & e \le aE \\ 1 - \dfrac{e - aE}{E - aE} (1 - \rho) & e > aE \end{cases}
+```
+
+Các kỹ thuật trên chỉ tác động trong quá trình huấn luyện; ảnh sinh ra để lưu trữ hoặc hiển thị không qua bất kỳ phép tăng cường nào.
 
 ---
 
-## 6. 🔁 Quy trình huấn luyện 3 giai đoạn
+## 6. Huấn luyện ba giai đoạn
 
 ```mermaid
 flowchart LR
-    S1["<b>Stage 1</b> · 150 ep<br/>Tìm cấu trúc<br/>LR bằng nhau, không regularization"]
-    S2["<b>Stage 2</b> · 200 ep<br/>Tinh chỉnh an toàn<br/>TTUR + noise + DiffAug + EMA"]
-    S3["<b>Stage 3</b> · ≤100 ep<br/>Làm sắc, giữ đa dạng<br/>LR thấp + mode-seeking + early stop"]
-    OUT[("stage3/best/<br/>generator_best.weights.h5")]
-    S1 -- "G, D" --> S2 -- "G-EMA, D" --> S3 --> OUT
+    S1["Giai đoạn 1 (150 epoch)<br/>Học cấu trúc khuôn mặt"]
+    S2["Giai đoạn 2 (200 epoch)<br/>Tinh chỉnh có kiểm soát"]
+    S3["Giai đoạn 3 (tối đa 100 epoch)<br/>Tăng độ nét, giữ độ đa dạng"]
+    OUT[("stage3/best/generator_best.weights.h5")]
+    S1 -- "G, D" --> S2 -- "G (EMA), D" --> S3 --> OUT
 ```
 
-| Tham số | Stage 1 | Stage 2 | Stage 3 |
+| Tham số | Giai đoạn 1 | Giai đoạn 2 | Giai đoạn 3 |
 |---|:---:|:---:|:---:|
-| **Nhiệm vụ** | Tìm nhanh cấu trúc khuôn mặt | Tinh chỉnh chậm và an toàn | Làm sắc nét, giữ đa dạng |
-| Epochs | 150 | 200 | tối đa 100 |
-| LR của G / D | `2e-4` / `2e-4` | `1.5e-4` / `5e-5` | `5e-5` / `2.5e-5` |
-| Instance noise $\sigma_0$ | – | 0.05 → 0 | – (tắt có chủ đích) |
-| DiffAugment | – | translation | translation |
-| EMA $\beta$ | – | 0.95 (~20 epoch) | 0.90 |
-| Mode-seeking $\lambda_{ms}$ | – | – | 0.2 |
-| LR giảm từ / floor | – | 70 % → 0.4× | 30 % → 0.3× |
-| Snapshot | mỗi 25 ep | mỗi 25 ep | mỗi 10 ep |
-| Dừng sớm khi collapse | – | – | ✅ |
-| Khởi tạo | ngẫu nhiên | G, D của stage 1 | **G-EMA** và D của stage 2 |
+| Nhiệm vụ | Học nhanh cấu trúc khuôn mặt | Tinh chỉnh chậm, ổn định | Tăng độ nét, duy trì độ đa dạng |
+| Số epoch | 150 | 200 | tối đa 100 |
+| Tốc độ học G / D | `2e-4` / `2e-4` | `1.5e-4` / `5e-5` | `5e-5` / `2.5e-5` |
+| Instance noise ban đầu | không | 0.05, giảm về 0 | không |
+| DiffAugment | không | translation | translation |
+| Hệ số EMA | không | 0.95 | 0.90 |
+| Trọng số mode-seeking | 0 | 0 | 0.2 |
+| Bắt đầu giảm tốc độ học / mức sàn | không giảm | 70 % / 0.4 | 30 % / 0.3 |
+| Chu kỳ lưu snapshot | 25 epoch | 25 epoch | 10 epoch |
+| Dừng sớm khi sụp mode | không | không | có |
+| Khởi tạo | ngẫu nhiên | G và D của giai đoạn 1 | G (EMA) và D của giai đoạn 2 |
 
-**Tham số dùng chung:** `IMAGE_SIZE=128` · `NOISE_DIM=100` · `EMBEDDING_DIM=50` · `BATCH_SIZE=128` (~77 bước/epoch) · `CHECKPOINT_EVERY=5` · `REAL_LABEL_SMOOTHING=0.9` · `RANDOM_SEED=42` · `HEALTH_TARGET=0.85` · `COLLAPSE_STOP_RATIO=0.60` · `COLLAPSE_PATIENCE=2`
+**Tham số chung:** `IMAGE_SIZE = 128`, `NOISE_DIM = 100`, `EMBEDDING_DIM = 50`, `BATCH_SIZE = 128` (khoảng 77 bước mỗi epoch), `CHECKPOINT_EVERY = 5`, `REAL_LABEL_SMOOTHING = 0.9`, `RANDOM_SEED = 42`, `HEALTH_TARGET = 0.85`, `COLLAPSE_STOP_RATIO = 0.60`, `COLLAPSE_PATIENCE = 2`.
 
-<details>
-<summary><b>Vì sao chia ra như vậy?</b></summary>
+**Lý do chia ba giai đoạn**
 
-- **Stage 1** dùng công thức DCGAN thô vì nó tìm ra cấu trúc khuôn mặt nhanh nhất: mèo hội tụ khoảng epoch 100–120, chó khoảng epoch 150. Stage dừng ở 150 **trước khi** D áp đảo hoàn toàn (`disc_acc` đang leo lên 0.95+).
-- **Stage 2** nạp **cả G lẫn D** từ stage 1. Nếu bắt đầu với một D mới, chỉ vài trăm bước là phá hỏng những gì stage 1 đã học. D chỉ được học với LR bằng 1/3 của G. 200 epoch cho noise đủ thời gian giảm dần, và LR chỉ bắt đầu giảm từ epoch 140.
-- **Stage 3** tắt instance noise **có chủ đích**, vì noise là thứ giữ lại ảnh mờ. $\lambda_{ms}=0.2$ đủ để chống collapse mà không lấn át việc làm sắc. `lr_floor=0.3` giữ lại một chút tín hiệu học tới tận cuối stage.
-- Các tham số LR schedule được tính theo **tỉ lệ** của độ dài stage, nên đổi số epoch thì điểm bắt đầu giảm LR cũng tự dời theo.
+- Giai đoạn 1 sử dụng cấu hình DCGAN cơ bản vì cấu hình này học cấu trúc khuôn mặt nhanh nhất: lớp mèo hội tụ quanh epoch 100–120, lớp chó quanh epoch 150. Giai đoạn kết thúc ở epoch 150, trước khi bộ phân biệt áp đảo hoàn toàn (độ chính xác đang tăng dần về 0.95).
+- Giai đoạn 2 nạp cả bộ sinh và bộ phân biệt từ giai đoạn 1. Nếu khởi tạo lại bộ phân biệt, những gì bộ sinh đã học sẽ bị phá vỡ chỉ sau vài trăm bước. Tốc độ học của bộ phân biệt được giảm còn một phần ba so với bộ sinh. Thời lượng 200 epoch đủ để instance noise giảm dần, và tốc độ học chỉ bắt đầu giảm từ epoch 140.
+- Giai đoạn 3 tắt instance noise vì nhiễu có xu hướng duy trì ảnh mờ. Trọng số mode-seeking 0.2 đủ để chống sụp mode mà không lấn át mục tiêu tăng độ nét. Mức sàn tốc độ học 0.3 giữ lại một phần tín hiệu học đến cuối giai đoạn.
+- Các mốc của lịch tốc độ học được tính theo tỷ lệ độ dài giai đoạn, nên khi thay đổi số epoch thì các mốc này tự điều chỉnh theo.
 
-</details>
+**Các loại trọng số được lưu trong mỗi giai đoạn**
 
-**Mỗi stage lưu 3 loại trọng số:**
-
-| Loại | File | Khi nào | Dùng để |
+| Loại | Tệp | Thời điểm lưu | Công dụng |
 |---|---|---|---|
-| 🔄 Rolling | `generator.weights.h5`, `discriminator.weights.h5`, `generator_ema.weights.h5` | mỗi 5 ep, ghi đè | Resume khi Colab ngắt |
-| 📌 Snapshot | `snapshots/generator[_ema]_eXXX.weights.h5` | mỗi 25/10 ep, **không ghi đè** | Quay lại bản cũ; animation trên web |
-| 🏆 Best | `best/generator_best.weights.h5` + `best_info.json` | khi `score` tăng | Export, demo |
+| Checkpoint luân phiên | `generator.weights.h5`, `discriminator.weights.h5`, `generator_ema.weights.h5` | Mỗi 5 epoch, ghi đè | Tiếp tục huấn luyện khi phiên bị ngắt |
+| Snapshot | `snapshots/generator[_ema]_eXXX.weights.h5` | Mỗi 25 hoặc 10 epoch, không ghi đè | Quay lại phiên bản trước; minh họa quá trình học |
+| Mô hình tốt nhất | `best/generator_best.weights.h5` và `best_info.json` | Khi điểm đánh giá tăng | Xuất mô hình, demo |
 
-Ngoài ra, `history.csv` ghi một dòng mỗi epoch: loss, `disc_acc`, `ms_signal`, `score`, `health`, `sharp_ratio`, LR, noise, và `struct/color/sharp` theo từng loài.
+Ngoài ra, tệp `history.csv` ghi lại một dòng cho mỗi epoch, gồm: loss, độ chính xác của bộ phân biệt, giá trị mode-seeking, điểm đánh giá, `health`, tỷ lệ độ nét, tốc độ học, mức nhiễu và các chỉ số `struct`, `color`, `sharp` của từng loài.
 
 ---
 
-## 7. 📈 Theo dõi và chọn mô hình
+## 7. Theo dõi huấn luyện và chọn mô hình
 
-Loss của GAN không phản ánh chất lượng ảnh, nên mỗi epoch notebook đo **3 metric cho từng loài** trên 64 vector $z$ cố định, rồi so với cùng metric đo trên ảnh thật:
+Do giá trị loss không phản ánh chất lượng ảnh, sau mỗi epoch notebook tính ba chỉ số cho từng loài trên 64 vector nhiễu cố định và so sánh với cùng chỉ số trên ảnh thật.
 
-| Metric | Định nghĩa | Phát hiện |
+| Chỉ số | Định nghĩa | Hiện tượng phát hiện được |
 |---|---|---|
-| `struct` | $1-\overline{\rho}$, với $\overline{\rho}$ là trung bình tương quan cặp giữa các ảnh (ảnh xám, 32×32, chuẩn hoá từng ảnh, nên màu và độ sáng bị loại bỏ) | **Collapse**: 16 mặt giống nhau thì `struct` ≈ 0 |
-| `color` | Độ lệch chuẩn của màu RGB trung bình giữa các ảnh | Mọi ảnh bị kẹt trong một bảng màu hẹp |
+| `struct` | 1 trừ hệ số tương quan trung bình giữa các cặp ảnh (ảnh xám 32×32, chuẩn hóa từng ảnh nên loại bỏ ảnh hưởng của màu và độ sáng) | Sụp mode: khi các ảnh giống nhau, `struct` tiến về 0 |
+| `color` | Độ lệch chuẩn của màu trung bình giữa các ảnh | Các ảnh bị giới hạn trong một dải màu hẹp |
 | `sharp` | Trung bình độ lớn gradient Sobel | Ảnh bị mờ |
 
-$$
-\text{sharp\_ratio}=\min\Big(1,\ \tfrac{\sum_y \text{sharp}_G(y)}{\sum_y \text{sharp}_{\text{real}}(y)}\Big),\qquad
-\text{health}=\min_y \tfrac{\text{struct}_G(y)}{\text{struct}_{\text{real}}(y)},\qquad
-\text{score}=\text{sharp\_ratio}\cdot\min\Big(1,\ \tfrac{\text{health}}{0.85}\Big)
-$$
+Checkpoint tốt nhất được chọn theo điểm tổng hợp:
 
-"Best" là **mô hình sắc nét nhất trong số những mô hình vẫn còn đa dạng**. Làm sắc quá mức không được thưởng thêm, còn mô hình sắc mà collapse thì bị phạt. Ở stage 3, nếu `health < 0.60` trong **2** lần kiểm tra liên tiếp thì dừng sớm. Notebook cũng in cảnh báo khi `disc_acc > 0.95` hoặc `< 0.55`.
+```math
+r_{\mathrm{sharp}} = \min\left(1,\ \frac{\sum_y \mathrm{sharp}_G(y)}{\sum_y \mathrm{sharp}_{\mathrm{real}}(y)}\right), \qquad
+h = \min_y \frac{\mathrm{struct}_G(y)}{\mathrm{struct}_{\mathrm{real}}(y)}, \qquad
+\mathrm{score} = r_{\mathrm{sharp}} \cdot \min\left(1,\ \frac{h}{0.85}\right)
+```
 
-> [!TIP]
-> Metric chỉ là tín hiệu tham khảo. **Luôn xem lưới ảnh** trong `reports/figures/04_training/` trước khi tin vào con số.
+Theo công thức trên, mô hình tốt nhất là mô hình có độ nét cao nhất trong số các mô hình còn giữ được độ đa dạng. Việc tăng độ nét vượt mức ảnh thật không được cộng điểm, còn mô hình nét nhưng bị sụp mode sẽ bị trừ điểm. Ở giai đoạn 3, quá trình huấn luyện dừng sớm nếu $h < 0.60$ trong hai lần kiểm tra liên tiếp. Notebook cũng đưa ra cảnh báo khi độ chính xác của bộ phân biệt vượt 0.95 hoặc thấp hơn 0.55.
+
+Các chỉ số trên chỉ mang tính tham khảo. Việc đánh giá cuối cùng vẫn dựa trên quan sát lưới ảnh trong `reports/figures/04_training/`.
 
 ---
 
-## 8. 🧪 Các thí nghiệm
+## 8. Các thí nghiệm
 
-Lưới ảnh (mỗi 5 epoch) của 7 lần chạy nằm trong `reports/figures/04_training/`, video timelapse nằm trong [`reports/figures/videos/`](reports/figures/videos).
+Lưới ảnh sinh (lưu mỗi 5 epoch) của các lần chạy được lưu tại `reports/figures/04_training/`, video tương ứng tại [`reports/figures/videos/`](reports/figures/videos).
 
-| # | Tên | Ý tưởng | Độ dài | Kết quả | Xem |
+| STT | Tên | Thay đổi chính | Số epoch | Nhận xét | Tư liệu |
 |:-:|---|---|---|---|---|
-| 1 | `default` | D nhận RGB + kênh loài | 335 ep | ❌ **Mode collapse**: mỗi loài chỉ ra một khuôn mặt | [🖼️](reports/figures/04_training/default/epoch_335.png) [🎬](reports/figures/videos/default.mp4) |
-| 2 | `laplacian` | + kênh Laplacian cho D | 300 ep | ✅ Đa dạng, còn mờ | [🖼️](reports/figures/04_training/laplacian/epoch_300.png) [🎬](reports/figures/videos/laplacian.mp4) |
-| 3 | `sobel` | + kênh Sobel cho D | 300 ep | ✅ Đa dạng, viền rõ hơn → **Sobel được chọn** | [🖼️](reports/figures/04_training/sobel/epoch_300.png) [🎬](reports/figures/videos/sobel.mp4) |
-| 4 | `sobel_v2` | Biến thể của Sobel | 155 ep | ❌ Vỡ thành các mảng texture lặp | [🖼️](reports/figures/04_training/sobel_v2/epoch_155.png) [🎬](reports/figures/videos/sobel_v2.mp4) |
-| 5 | `sobelv3` | Train một giai đoạn dài | 300 ep | ⚠️ Nhận ra được nhưng nhiều nhiễu | [🖼️](reports/figures/04_training/sobelv3/epoch_300.png) [🎬](reports/figures/videos/sobelv3.mp4) |
-| 6 | `sobelv4` | Lần đầu thử **3 stage** | 150 + 100 + 80 | ✅ Sắc và đa dạng hơn rõ rệt | [🖼️](reports/figures/04_training/sobelv4/stage3/epoch_080.png) [🎬](reports/figures/videos/sobelv4.mp4) |
-| 7 | **`sobelv5`** | 3 stage, **stage 2 kéo dài lên 200 ep** | 150 + 200 + 100 | 🏆 **Mô hình cuối cùng** | [🖼️](reports/figures/04_training/sobelv5/stage3/epoch_100.png) [🎬](reports/figures/videos/sobelv5.mp4) |
-| – | `kinkySobel` | Bản 64×64 của v5 + checkpoint cho web | – | Chỉ có notebook | – |
+| 1 | `default` | Bộ phân biệt nhận RGB và kênh loài | 335 | Sụp mode: mỗi loài chỉ sinh ra một khuôn mặt | [Ảnh](reports/figures/04_training/default/epoch_335.png) · [Video](reports/figures/videos/default.mp4) |
+| 2 | `laplacian` | Thêm kênh Laplacian cho bộ phân biệt | 300 | Đa dạng, ảnh còn mờ | [Ảnh](reports/figures/04_training/laplacian/epoch_300.png) · [Video](reports/figures/videos/laplacian.mp4) |
+| 3 | `sobel` | Thêm kênh Sobel cho bộ phân biệt | 300 | Đa dạng, đường biên rõ hơn; kênh Sobel được chọn cho các bước tiếp theo | [Ảnh](reports/figures/04_training/sobel/epoch_300.png) · [Video](reports/figures/videos/sobel.mp4) |
+| 4 | `sobel_v2` | Biến thể của cấu hình Sobel | 155 | Thất bại: ảnh vỡ thành các mảng vân lặp lại | [Ảnh](reports/figures/04_training/sobel_v2/epoch_155.png) · [Video](reports/figures/videos/sobel_v2.mp4) |
+| 5 | `sobelv3` | Huấn luyện một giai đoạn kéo dài | 300 | Nhận diện được loài nhưng còn nhiều nhiễu | [Ảnh](reports/figures/04_training/sobelv3/epoch_300.png) · [Video](reports/figures/videos/sobelv3.mp4) |
+| 6 | `sobelv4` | Lần đầu áp dụng huấn luyện ba giai đoạn | 150 + 100 + 80 | Độ nét và độ đa dạng cải thiện rõ | [Ảnh](reports/figures/04_training/sobelv4/stage3/epoch_080.png) · [Video](reports/figures/videos/sobelv4.mp4) |
+| 7 | `sobelv5` | Ba giai đoạn, kéo dài giai đoạn 2 lên 200 epoch | 150 + 200 + 100 | Mô hình cuối cùng | [Ảnh](reports/figures/04_training/sobelv5/stage3/epoch_100.png) · [Video](reports/figures/videos/sobelv5.mp4) |
+| – | `kinkySobel` | Phiên bản 64×64 của `sobelv5` | – | Chưa có kết quả trong kho mã | – |
 
-Thí nghiệm 1–3 là **ablation kênh phụ của D**. Chỉ `sobelv5` và `kinkySobel` còn notebook huấn luyện; cấu hình của các lần chạy 1–6 được mô tả dựa trên lưới ảnh đã lưu.
+Thí nghiệm 1 đến 3 là thí nghiệm loại bỏ (ablation) đối với kênh phụ của bộ phân biệt. Hiện chỉ `sobelv5` và `kinkySobel` còn lưu notebook huấn luyện; thông tin về các thí nghiệm 1 đến 6 được tổng hợp từ lưới ảnh đã lưu.
 
 <table>
 <tr>
-<td align="center"><img src="reports/figures/04_training/default/epoch_335.png" alt="default"><br><sub><b>default</b>: collapse, cùng một khuôn mặt</sub></td>
-<td align="center"><img src="reports/figures/04_training/sobel/epoch_300.png" alt="sobel"><br><sub><b>sobel</b>: thêm kênh Sobel cho D</sub></td>
+<td align="center"><img src="reports/figures/04_training/default/epoch_335.png" alt="Thí nghiệm default"><br><sub>Hình 3a. <code>default</code>: sụp mode, các mẫu có cùng khuôn mặt</sub></td>
+<td align="center"><img src="reports/figures/04_training/sobel/epoch_300.png" alt="Thí nghiệm sobel"><br><sub>Hình 3b. <code>sobel</code>: bổ sung kênh Sobel cho bộ phân biệt</sub></td>
 </tr>
 </table>
 
 ---
 
-## 9. 🏆 Kết quả
+## 9. Kết quả
 
-**So với ảnh validation thật** (checkpoint `stage3/best`, 64 ảnh mỗi loài):
+**So sánh với ảnh thật trong tập kiểm định** (checkpoint `stage3/best`, 64 ảnh mỗi loài):
 
-| Loài | `struct` sinh / thật | `color` sinh / thật | `sharp` sinh / thật |
+| Loài | `struct` (sinh / thật) | `color` (sinh / thật) | `sharp` (sinh / thật) |
 |---|:---:|:---:|:---:|
-| 🐶 Chó | 0.931 / 0.953 → **0.98×** | 0.214 / 0.235 → **0.91×** | 0.306 / 0.310 → **0.99×** |
-| 🐱 Mèo | 0.945 / 0.981 → **0.96×** | 0.218 / 0.203 → **1.07×** | 0.324 / 0.343 → **0.95×** |
+| Chó | 0.931 / 0.953 (tỷ lệ 0.98) | 0.214 / 0.235 (tỷ lệ 0.91) | 0.306 / 0.310 (tỷ lệ 0.99) |
+| Mèo | 0.945 / 0.981 (tỷ lệ 0.96) | 0.218 / 0.203 (tỷ lệ 1.07) | 0.324 / 0.343 (tỷ lệ 0.95) |
 
-**Checkpoint best của từng stage** (`models/sobelv5/stage*/best/best_info.json`):
+**Checkpoint tốt nhất của từng giai đoạn** (`models/sobelv5/stage*/best/best_info.json`):
 
-| Stage | Best @ epoch | Score | Health | `disc_acc` cuối stage |
+| Giai đoạn | Epoch tốt nhất | Điểm | Health | Độ chính xác D cuối giai đoạn |
 |---|:---:|:---:|:---:|:---:|
-| Stage 1 | 60 | 1.000 | 0.859 | 0.973 ⚠️ |
-| Stage 2 | 200 | 0.993 | 0.937 | 0.860 ✅ |
-| Stage 3 | 5 | 1.000 | 0.936 | 0.926 |
+| 1 | 60 | 1.000 | 0.859 | 0.973 |
+| 2 | 200 | 0.993 | 0.937 | 0.860 |
+| 3 | 5 | 1.000 | 0.936 | 0.926 |
 
 <table>
 <tr>
-<td align="center"><img src="notebooks/evaluation/sobelv5/figures/stage_best_stage1.png" alt="stage1 best"><br><sub>Stage 1 best</sub></td>
-<td align="center"><img src="notebooks/evaluation/sobelv5/figures/stage_best_stage2.png" alt="stage2 best"><br><sub>Stage 2 best</sub></td>
-<td align="center"><img src="notebooks/evaluation/sobelv5/figures/stage_best_stage3.png" alt="stage3 best"><br><sub>Stage 3 best</sub></td>
+<td align="center"><img src="notebooks/evaluation/sobelv5/figures/stage_best_stage1.png" alt="Giai đoạn 1"><br><sub>Giai đoạn 1</sub></td>
+<td align="center"><img src="notebooks/evaluation/sobelv5/figures/stage_best_stage2.png" alt="Giai đoạn 2"><br><sub>Giai đoạn 2</sub></td>
+<td align="center"><img src="notebooks/evaluation/sobelv5/figures/stage_best_stage3.png" alt="Giai đoạn 3"><br><sub>Giai đoạn 3</sub></td>
 </tr>
 </table>
-<p align="center"><sub>Cùng 8 vector z qua best của ba stage: stage 1 tìm ra hình dạng, stage 2–3 làm sạch nhiễu và làm rõ chi tiết.</sub></p>
+<p align="center"><sub>Hình 4. Ảnh sinh từ cùng 8 vector nhiễu qua checkpoint tốt nhất của ba giai đoạn. Giai đoạn 1 hình thành cấu trúc khuôn mặt; giai đoạn 2 và 3 giảm nhiễu và làm rõ chi tiết.</sub></p>
 
 **Nhận xét**
 
-- Độ đa dạng và độ sắc nét đều đạt khoảng **95–99 %** so với ảnh thật. Không có dấu hiệu collapse.
-- TTUR ở stage 2 kéo `disc_acc` từ **0.97 xuống 0.86**, tức D đã bị kìm lại đúng như mong muốn.
-- Nhìn bằng mắt: đa số mẫu nhận ra ngay là chó hay mèo, nhưng vẫn có mắt lệch, mặt méo, hoặc vùng lông lộn xộn. Như vậy là **đủ cho mục tiêu học tập**.
+- Độ đa dạng và độ nét của ảnh sinh đạt khoảng 95–99 % so với ảnh thật, không có dấu hiệu sụp mode.
+- TTUR ở giai đoạn 2 làm độ chính xác của bộ phân biệt giảm từ 0.97 xuống 0.86, cho thấy bộ phân biệt đã được kiềm chế như thiết kế.
+- Về mặt trực quan, phần lớn ảnh sinh nhận diện được loài. Tuy nhiên vẫn còn các lỗi như mắt lệch, khuôn mặt biến dạng hoặc vùng lông thiếu tự nhiên. Kết quả này phù hợp với mục tiêu học tập của đề tài.
 
 ---
 
-## 10. 🧰 Lệnh tiện dụng (`scripts/gan.py`)
+## 10. Công cụ dòng lệnh
 
-Một CLI nhỏ để dùng mô hình mà không cần mở notebook. Chạy từ thư mục gốc của dự án; mọi ảnh được lưu vào `outputs/` (đã có trong `.gitignore`).
+Tệp `scripts/gan.py` cung cấp các lệnh sử dụng mô hình mà không cần mở notebook. Các lệnh được chạy từ thư mục gốc của dự án; ảnh đầu ra được lưu vào `outputs/` (đã khai báo trong `.gitignore`).
 
-| Lệnh | Việc làm | Cần TensorFlow |
+| Lệnh | Chức năng | Cần TensorFlow |
 |---|---|:---:|
-| `info` | Liệt kê checkpoint (best, snapshot), dữ liệu và thư viện đang có | – |
-| `generate` | Sinh một lưới ảnh chó, mèo hoặc cả hai | ✅ |
-| `evolution` | Cho **cùng một $z$** chạy qua các checkpoint để xem mô hình "lớn lên"; có thể xuất GIF | ✅ |
-| `interpolate` | Nội suy tuyến tính giữa các vector $z$ để thấy không gian latent liên tục | ✅ |
-| `history` | Vẽ loss, `struct`, `sharp`, `disc_acc` của cả 3 stage từ `history.csv` | – |
-| `serve` | Chạy web demo | ✅ |
+| `info` | Liệt kê checkpoint, dữ liệu và thư viện hiện có | Không |
+| `generate` | Sinh lưới ảnh chó, mèo hoặc cả hai | Có |
+| `evolution` | Sinh ảnh từ cùng một vector nhiễu qua các checkpoint để minh họa quá trình học; có thể xuất GIF | Có |
+| `interpolate` | Nội suy tuyến tính giữa các vector nhiễu | Có |
+| `history` | Vẽ biểu đồ loss và các chỉ số của ba giai đoạn từ `history.csv` | Không |
+| `serve` | Khởi động web demo | Có |
 
 ```bash
 # Kiểm tra môi trường
 python scripts/gan.py info
 
 # Sinh ảnh
-python scripts/gan.py generate                                   # 8 chó + 8 mèo, seed 42
+python scripts/gan.py generate                                   # 8 ảnh chó và 8 ảnh mèo, seed 42
 python scripts/gan.py generate --species cat -n 16 --seed 7 --upscale 2 --labels
 python scripts/gan.py generate --species dog -n 4 --separate     # lưu thêm từng ảnh riêng
-python scripts/gan.py generate --ckpt stage1                     # dùng best của stage 1
+python scripts/gan.py generate --ckpt stage1                     # dùng checkpoint tốt nhất của giai đoạn 1
 python scripts/gan.py generate --ckpt stage2:e150                # dùng snapshot (nếu có)
 
-# Xem quá trình tiến hoá (mỗi seed một hàng)
+# Minh họa quá trình học (mỗi seed một hàng)
 python scripts/gan.py evolution --species cat --seeds 1 2 3 --gif
 
-# Nội suy trong không gian latent
+# Nội suy trong không gian ẩn
 python scripts/gan.py interpolate --species dog --seeds 10 20 30 --steps 6
 
 # Biểu đồ huấn luyện
@@ -450,10 +461,9 @@ python scripts/gan.py history
 python scripts/gan.py generate -h
 ```
 
-> [!NOTE]
-> `--seed` dùng đúng quy ước với web demo (`numpy.random.default_rng(seed)`), nên cùng một seed và cùng một loài sẽ ra **đúng một con vật** ở CLI lẫn trên web.
+Tham số `--seed` dùng cùng quy ước với web demo (`numpy.random.default_rng(seed)`), do đó cùng một seed và cùng một loài sẽ cho cùng một ảnh trên cả hai công cụ.
 
-**Sinh ảnh từ Python:**
+Sinh ảnh trực tiếp bằng Python:
 
 ```python
 import numpy as np
@@ -464,39 +474,39 @@ G = build_generator()
 G.load_weights("models/sobelv5/stage3/best/generator_best.weights.h5")
 
 z = latent_from_seed(42, n=8)                 # (8, 100)
-y = np.full(8, 1, dtype="int32")              # 0 = chó, 1 = mèo
-imgs = to_uint8(G([z, y], training=False))    # (8, 128, 128, 3) uint8
+y = np.full(8, 1, dtype="int32")              # 0: chó, 1: mèo
+imgs = to_uint8(G([z, y], training=False))    # (8, 128, 128, 3), uint8
 Image.fromarray(np.hstack(imgs)).save("cats.png")
 ```
 
 ---
 
-## 11. 🌐 Web demo
+## 11. Web demo
 
 ```bash
 pip install -r requirements-web.txt     # flask, numpy, pillow, tensorflow
 python src/web_server.py                # hoặc: python scripts/gan.py serve
 ```
 
-Mở **<http://127.0.0.1:5000>**, chọn **Dog** hoặc **Cat**, rồi bấm **Generate**.
+Sau khi khởi động, truy cập <http://127.0.0.1:5000>, chọn Dog hoặc Cat và nhấn Generate.
 
 ```mermaid
 sequenceDiagram
     participant B as Trình duyệt
-    participant S as Flask (web_server.py)
-    B->>S: POST /api/evolution {species, seed?}
-    S->>S: z = default_rng(seed).standard_normal(100)
-    loop với mỗi checkpoint (stage1 → stage3 → best)
-        S->>S: G.load_weights(ckpt) · G(z, y)
-        S-->>B: 1 dòng NDJSON {frame, label, ảnh base64}
-        B->>B: chuyển cảnh mượt (crossfade)
+    participant S as Máy chủ Flask
+    B->>S: POST /api/evolution {species, seed}
+    S->>S: Tạo vector nhiễu z từ seed
+    loop Mỗi checkpoint (giai đoạn 1 đến checkpoint tốt nhất)
+        S->>S: Nạp trọng số, sinh ảnh G(z, y)
+        S-->>B: Một dòng NDJSON chứa ảnh base64
+        B->>B: Hiển thị với hiệu ứng chuyển cảnh
     end
     S-->>B: {type: "done", seed}
 ```
 
-- **Một** vector $z$ chạy qua các checkpoint theo thời gian, và bạn thấy **cùng một con vật** hình thành dần.
-- Chỉ **một** object Generator được dùng lại, mỗi lần chỉ đổi trọng số, nên nhẹ hơn nhiều so với nạp 15 model.
-- `GET /api/health` trả về danh sách checkpoint đang dùng.
+- Một vector nhiễu duy nhất được đưa qua lần lượt các checkpoint, cho phép quan sát cùng một khuôn mặt hình thành theo quá trình huấn luyện.
+- Máy chủ dùng lại một đối tượng bộ sinh và chỉ thay trọng số ở mỗi bước, tiết kiệm bộ nhớ so với nạp nhiều mô hình.
+- `GET /api/health` trả về danh sách checkpoint đang sử dụng.
 - Gọi API trực tiếp:
 
   ```bash
@@ -504,89 +514,85 @@ sequenceDiagram
   ```
 
 > [!IMPORTANT]
-> Các file `snapshots/` bị `.gitignore` vì quá nặng, nên bản clone từ GitHub **chỉ có `stage*/best/`** và web demo chỉ hiện ảnh của `stage3/best`. Muốn xem đầy đủ quá trình tiến hoá, hãy chép các file `generator_eXXX.weights.h5` / `generator_ema_eXXX.weights.h5` vào `models/sobelv5/stage{1,2,3}/snapshots/`. Riêng lệnh `python scripts/gan.py evolution` vẫn dùng được best của 3 stage khi không có snapshot.
+> Thư mục `snapshots/` không được đưa lên kho mã do dung lượng lớn. Vì vậy khi tải mã từ GitHub, chỉ có các tệp trong `stage*/best/`, và web demo chỉ hiển thị ảnh của `stage3/best`. Để xem đầy đủ quá trình học, cần chép các tệp `generator_eXXX.weights.h5` và `generator_ema_eXXX.weights.h5` vào `models/sobelv5/stage{1,2,3}/snapshots/`. Lệnh `python scripts/gan.py evolution` vẫn hoạt động khi không có snapshot bằng cách sử dụng checkpoint tốt nhất của ba giai đoạn.
 
 ---
 
-## 12. 🔧 Chạy lại toàn bộ pipeline
+## 12. Tái lập toàn bộ quy trình
 
-| Bước | Notebook | Chạy ở đâu | Đầu ra |
+| Bước | Notebook | Môi trường | Đầu ra |
 |:-:|---|---|---|
-| 1 | `01_download_data` | 💻 Local | `data/raw/images/`, `manifest.csv` |
-| 2 | `02_eda` | 💻 Local | `reports/figures/02_eda/` |
-| 3 | `03_preprocessing_128` (hoặc `_64`) | 💻 Local | `data/processed/images_128/`, các manifest |
-| 4 | `04_model_training_5th_attempt` | ☁️ **Colab GPU** | `models/sobelv5/`, lưới ảnh |
-| 5 | `05_evaluation_report` | 💻 Local | `notebooks/evaluation/sobelv5/` |
+| 1 | `01_download_data` | Máy cục bộ | `data/raw/images/`, `manifest.csv` |
+| 2 | `02_eda` | Máy cục bộ | `reports/figures/02_eda/` |
+| 3 | `03_preprocessing_128` (hoặc `_64`) | Máy cục bộ | `data/processed/images_128/` và các tệp manifest |
+| 4 | `04_model_training_5th_attempt` | Google Colab (GPU) | `models/sobelv5/`, lưới ảnh huấn luyện |
+| 5 | `05_evaluation_report` | Máy cục bộ | `notebooks/evaluation/sobelv5/` |
 
 ```bash
 python -m venv .venv
-.venv\Scripts\activate                 # Windows  (macOS/Linux: source .venv/bin/activate)
+.venv\Scripts\activate                 # Windows (macOS/Linux: source .venv/bin/activate)
 pip install -r requirements.txt        # thư viện cho notebook 01–03
 jupyter notebook notebooks/
 ```
 
-1. Chạy lần lượt **01 → 02 → 03** trên máy. Cần khoảng 2 GB ổ đĩa trống.
-2. Upload `data/processed/` lên Google Drive tại `MyDrive/dog-gan-project/data/processed/`.
-3. Mở notebook **04** trên Colab (*Runtime → Change runtime type → GPU*) và chạy lần lượt `stage1 → stage2 → stage3`. Nếu phiên bị ngắt, chỉ cần chạy lại cell của stage đó, notebook sẽ tự resume.
-4. Tải `models/sobelv5/` về máy rồi chạy notebook **05**. Muốn tính FID/KID thì đặt `RUN_INCEPTION_METRICS = True`.
+1. Chạy lần lượt các notebook 01, 02 và 03 trên máy cục bộ (cần khoảng 2 GB dung lượng trống).
+2. Tải thư mục `data/processed/` lên Google Drive tại `MyDrive/dog-gan-project/data/processed/`.
+3. Mở notebook 04 trên Colab, chọn GPU tại *Runtime → Change runtime type*, rồi chạy lần lượt ba giai đoạn. Nếu phiên bị ngắt, chạy lại ô lệnh của giai đoạn tương ứng; notebook sẽ tiếp tục từ checkpoint gần nhất.
+4. Tải thư mục `models/sobelv5/` về máy và chạy notebook 05. Để tính FID/KID, đặt `RUN_INCEPTION_METRICS = True`.
 
 ---
 
-## 13. 📁 Cấu trúc thư mục
+## 13. Cấu trúc thư mục
 
 ```text
 Dogs-and-cats-by-GANs/
-├── data/processed/               manifest train/val + log ảnh bị loại (ảnh không nằm trong repo)
+├── data/processed/               manifest tập huấn luyện/kiểm định, nhật ký ảnh bị loại
 ├── models/sobelv5/stage{1,2,3}/
-│   ├── history.csv               log từng epoch
-│   └── best/                     generator_best.weights.h5 + best_info.json
+│   ├── history.csv               nhật ký theo epoch
+│   └── best/                     generator_best.weights.h5, best_info.json
 ├── notebooks/
 │   ├── 01_download_data.ipynb
 │   ├── 02_eda.ipynb
-│   ├── 03_preprocessing_128.ipynb · 03_preprocessing_64.ipynb
-│   ├── 04_model_training_5th_attempt.ipynb · 04_model_training_kinkySobel.ipynb
+│   ├── 03_preprocessing_128.ipynb, 03_preprocessing_64.ipynb
+│   ├── 04_model_training_5th_attempt.ipynb, 04_model_training_kinkySobel.ipynb
 │   ├── 05_evaluation_report.ipynb
-│   └── evaluation/sobelv5/       figures/ · tables/ · evaluation_summary.json
+│   └── evaluation/sobelv5/       figures/, tables/, evaluation_summary.json
 ├── reports/figures/
-│   ├── 02_eda/ · 03_preprocessing/ · 03_preprocessing_64/
+│   ├── 02_eda/, 03_preprocessing/, 03_preprocessing_64/
 │   ├── 04_training/<thí nghiệm>/epoch_XXX.png
 │   └── videos/<thí nghiệm>.mp4
-├── scripts/gan.py                CLI: info · generate · evolution · interpolate · history · serve
+├── scripts/gan.py                công cụ dòng lệnh
 ├── src/
-│   ├── generator.py              kiến trúc G dùng chung + tiện ích seed/ảnh
-│   └── web_server.py             Flask: stream các khung "tiến hoá"
-├── web/                          index.html · style.css · script.js
-├── requirements.txt              cho notebook 01–03
-├── requirements-web.txt          cho demo và CLI
-└── LICENSE                       MIT
+│   ├── generator.py              kiến trúc bộ sinh và các hàm tiện ích
+│   └── web_server.py             máy chủ Flask cho web demo
+├── web/                          index.html, style.css, script.js
+├── requirements.txt              thư viện cho notebook 01–03
+├── requirements-web.txt          thư viện cho web demo và công cụ dòng lệnh
+└── LICENSE
 ```
 
 ---
 
-## 14. ⚠️ Hạn chế đã biết
+## 14. Hạn chế
 
-- **Score bão hoà ở 1.0.** `sharp_ratio` và `health/0.85` đều bị chặn ở 1, và `best/` chỉ cập nhật khi score **lớn hơn hẳn** score cũ. Vì vậy `stage3/best` rơi vào **epoch 5**, lần đầu tiên chạm 1.0, dù các epoch sau có thể tốt không kém. Cách sửa: thêm tie-breaker bằng `health`, hoặc bỏ phần chặn trên.
-- `struct / color / sharp` chỉ đo thống kê bậc thấp; chúng **không** đánh giá được giải phẫu khuôn mặt (số mắt, vị trí mũi…).
-- Bản clone từ GitHub không có snapshot (xem §11).
-- Cấu hình của các thí nghiệm cũ (`default` → `sobelv4`) không còn notebook trong repo.
-- Notebook 04 có nhắc tới `06_export_model.ipynb`, nhưng notebook này chưa có.
-- Demo cần Python + TensorFlow. Muốn chạy tĩnh trên GitHub Pages thì cần chuyển G sang TensorFlow.js.
+- **Điểm đánh giá bị bão hòa.** Hai thành phần $r_{\mathrm{sharp}}$ và $h / 0.85$ đều bị chặn trên bởi 1, và checkpoint tốt nhất chỉ được cập nhật khi điểm tăng thực sự. Vì vậy checkpoint tốt nhất của giai đoạn 3 là epoch 5, lần đầu điểm đạt 1.0, dù các epoch sau có thể tốt tương đương. Có thể khắc phục bằng cách dùng `health` làm tiêu chí phụ khi điểm bằng nhau, hoặc bỏ giới hạn trên.
+- Các chỉ số `struct`, `color`, `sharp` chỉ phản ánh thống kê cấp thấp, không đánh giá được tính đúng đắn về giải phẫu (số mắt, vị trí mũi, …).
+- Bản tải từ GitHub không có snapshot (xem mục 11).
+- Cấu hình chi tiết của các thí nghiệm `default` đến `sobelv4` không còn notebook đi kèm.
+- Notebook 04 có đề cập `06_export_model.ipynb`, nhưng notebook này chưa được xây dựng.
+- Web demo yêu cầu Python và TensorFlow. Để chạy trên GitHub Pages, cần chuyển bộ sinh sang TensorFlow.js.
 
 ---
 
-## 15. 📚 Tham khảo và giấy phép
+## 15. Tài liệu tham khảo
 
-- Goodfellow et al., *Generative Adversarial Nets*, 2014
-- Mirza & Osindero, *Conditional Generative Adversarial Nets*, 2014
-- Radford et al., *Unsupervised Representation Learning with DCGANs*, 2015
-- Heusel et al., *GANs Trained by a Two Time-Scale Update Rule* (TTUR, FID), 2017
-- Sønderby et al., *Amortised MAP Inference for Image Super-resolution* (instance noise), 2016
-- Mao et al., *Mode Seeking GANs for Diverse Image Synthesis*, 2019
-- Zhao et al., *Differentiable Augmentation for Data-Efficient GAN Training*, 2020
-- Choi et al., *StarGAN v2* (bộ dữ liệu AFHQ), 2020
+1. I. Goodfellow et al., *Generative Adversarial Nets*, NeurIPS 2014.
+2. M. Mirza, S. Osindero, *Conditional Generative Adversarial Nets*, arXiv:1411.1784, 2014.
+3. A. Radford, L. Metz, S. Chintala, *Unsupervised Representation Learning with Deep Convolutional Generative Adversarial Networks*, ICLR 2016.
+4. M. Heusel et al., *GANs Trained by a Two Time-Scale Update Rule Converge to a Local Nash Equilibrium*, NeurIPS 2017.
+5. C. K. Sønderby et al., *Amortised MAP Inference for Image Super-resolution*, ICLR 2017.
+6. Q. Mao et al., *Mode Seeking Generative Adversarial Networks for Diverse Image Synthesis*, CVPR 2019.
+7. S. Zhao et al., *Differentiable Augmentation for Data-Efficient GAN Training*, NeurIPS 2020.
+8. Y. Choi et al., *StarGAN v2: Diverse Image Synthesis for Multiple Domains*, CVPR 2020.
 
-<div align="center">
-
-Mã nguồn: **MIT** ([LICENSE](LICENSE)) · Dữ liệu AFHQ: **CC BY-NC 4.0**, chỉ dùng phi thương mại
-
-</div>
+**Giấy phép.** Mã nguồn phát hành theo giấy phép MIT ([LICENSE](LICENSE)). Bộ dữ liệu AFHQ phát hành theo giấy phép CC BY-NC 4.0 và chỉ được sử dụng cho mục đích phi thương mại.
